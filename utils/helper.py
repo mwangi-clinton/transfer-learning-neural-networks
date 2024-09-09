@@ -8,7 +8,7 @@ from torchvision import transforms
 
 def create_dataloaders(data_folder):
     transform = transforms.Compose([
-        transforms.Resize((512, 512)),
+        transforms.Resize((128, 128)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -19,6 +19,7 @@ def create_dataloaders(data_folder):
     # Split dataset into train and validation
     val_split = 0.2
     num_samples = len(dataset)
+    print(num_samples)
     val_size = int(num_samples * val_split)
     train_size = num_samples - val_size
 

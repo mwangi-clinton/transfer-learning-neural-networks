@@ -8,33 +8,37 @@ from torchvision import transforms
 import timm
 from utils.helper import create_dataloaders
 import os
-NUMBER_OF_CLASSES = 5
+NUMBER_OF_CLASSES = 6
 
 class CustomModel(nn.Module):
     def __init__(self):
         super(CustomModel, self).__init__()
         self.num_classes = NUMBER_OF_CLASSES
         # Load the pre-trained EfficientNetB5 model
-        self.model = timm.create_model('efficientnet_b5', pretrained=False)
+        self.model = timm.create_model('efficientnet_b5', pretrained=True)
+        
+        # Remove the FC layers (last two layers) from EfficientNetB5
         self.model = nn.Sequential(*list(self.model.children())[:-2])
+        
+        # New classifier with softmax (logistic regression)
         self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Flatten(),
-            nn.Linear(2048, self.num_classes),
-            nn.Sigmoid()
+            nn.AdaptiveAvgPool2d(1),  # Pooling layer to reduce the spatial dimensions
+            nn.Flatten(),             # Flatten the pooled output to 1D
+            nn.Linear(2048, self.num_classes),  # New fully connected layer with num_classes output
+            nn.Softmax(dim=1)         # Softmax for multi-class classification
         )
 
-        # Freeze the first layers of the EfficientNetB5 backbone
+        # Freeze all the layers in EfficientNetB5
         for param in self.model.parameters():
             param.requires_grad = False
 
-        # Unfreeze the last few layers (optional: adjust as needed)
-        for param in list(self.model[-1].parameters()):
-            param.requires_grad = True
+        # Optionally, unfreeze the last few layers for fine-tuning (optional)
+        # for param in list(self.model[-1].parameters()):
+        #     param.requires_grad = True
 
     def forward(self, x):
-        x = self.model(x)
-        x = self.classifier(x)
+        x = self.model(x)   # Extract features from the pre-trained EfficientNetB5
+        x = self.classifier(x)  # Classify based on the extracted features
         return x
 
 
@@ -46,7 +50,7 @@ def train_models(data_folder, model_folder, verbose):
     train_loader, val_loader = create_dataloaders(data_folder)
 
     # Create model
-    model = CustomModel(num_classes=len(train_loader.dataset.dataset.classes)).to(device)
+    model = CustomModel().to(device)
 
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()
