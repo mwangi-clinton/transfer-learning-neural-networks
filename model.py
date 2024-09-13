@@ -6,7 +6,7 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 import timm
-from utils.helper import create_dataloaders
+from utils.helper_functions import create_dataloaders
 import os
 NUMBER_OF_CLASSES = 6
 
