@@ -5,11 +5,14 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
+from sklearn.model_selection import train_test_split
 import os
 import shutil
 
-def  build_dataset(source_dir,dest_dir):
+def  build_dataset(source_dir,dest_dir,verbose):
   #create the validation and traning folders in the destination folder
+    train_dir = ''
+    val_dir = ''
     os.makedirs(os.path.join(train_dir, dest_dir), exist_ok=True)
     os.makedirs(os.path.join(val_dir, dest_dir), exist_ok=True)
     for class_folder in os.listdir(source_dir):
@@ -33,29 +36,8 @@ def  build_dataset(source_dir,dest_dir):
         for file in val_files:
             shutil.copy(os.path.join(full_class_path, file), os.path.join(val_dir, class_folder, file))
 
-    trainTransform = transforms.Compose(
-      [
-        	transforms.RandomHorizontalFlip(),
-	        transforms.RandomRotation(90),
-          transforms.Resize((224, 224)),  # Resize images to 224x224 (or any size required by your model)
-          transforms.ToTensor(),          # Convert image to tensor
-          transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # Normalization values for pre-trained models
-]
-    )
-    valTransform=([
-      transforms.Resize((224,224)),
-      transforms.ToTensor(),
-      transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    # Load train and validation datasets
-    train_dataset = ImageFolder(root=train_dir, transform=trainTransform)
-    val_dataset = ImageFolder(root=val_dir, transform=valTransform)
-
-    # Data loaders for train and validation datasets
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+ 
 
 
-    return train_loader, val_loader
+    return dest_dir
 

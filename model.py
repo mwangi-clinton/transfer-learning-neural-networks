@@ -6,7 +6,7 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 import timm
-from utils.helper_functions import create_dataloaders
+from utils.helper_functions import build_dataset
 import os
 NUMBER_OF_CLASSES = 6
 
@@ -17,29 +17,31 @@ class CustomModel(nn.Module):
         # Load the pre-trained EfficientNetB5 model
         self.model = timm.create_model('efficientnet_b5', pretrained=True)
         
-        # Remove the FC layers (last two layers) from EfficientNetB5
-        self.model = nn.Sequential(*list(self.model.children())[:-2])
+        # # Remove the FC layers (last two layers) from EfficientNetB5
+        # self.model = nn.Sequential(*list(self.model.children())[:-2])
         
-        # New classifier with softmax (logistic regression)
-        self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),  # Pooling layer to reduce the spatial dimensions
-            nn.Flatten(),             # Flatten the pooled output to 1D
-            nn.Linear(2048, self.num_classes),  # New fully connected layer with num_classes output
-            nn.Softmax(dim=1)         # Softmax for multi-class classification
-        )
+        # # New classifier with softmax (logistic regression)
+        # self.classifier = nn.Sequential(
+        #     nn.AdaptiveAvgPool2d(1),  # Pooling layer to reduce the spatial dimensions
+        #     nn.Flatten(),             # Flatten the pooled output to 1D
+        #     nn.Linear(2048, self.num_classes),  # New fully connected layer with num_classes output
+        #     nn.Softmax(dim=1)         # Softmax for multi-class classification
+        # )
 
         # Freeze all the layers in EfficientNetB5
         for param in self.model.parameters():
             param.requires_grad = False
+        modelOyutputFeatures = self.model.fc.in_features
+        self.model.fc = nn.Linear(modelOyutputFeatures,self.num_classes)
 
         # Optionally, unfreeze the last few layers for fine-tuning (optional)
         # for param in list(self.model[-1].parameters()):
         #     param.requires_grad = True
 
-    def forward(self, x):
-        x = self.model(x)   # Extract features from the pre-trained EfficientNetB5
-        x = self.classifier(x)  # Classify based on the extracted features
-        return x
+    # def forward(self, x):
+    #     x = self.model(x)   # Extract features from the pre-trained EfficientNetB5
+    #     x = self.classifier(x)  # Classify based on the extracted features
+    #     return x
 
 
 # Training function
