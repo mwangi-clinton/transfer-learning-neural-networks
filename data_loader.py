@@ -1,4 +1,6 @@
-   trainTransform = transforms.Compose(
+
+def create_dataloader():
+  trainTransform = transforms.Compose(
       [
         	transforms.RandomHorizontalFlip(),
 	        transforms.RandomRotation(90),
