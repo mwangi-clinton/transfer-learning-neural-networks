@@ -10,54 +10,46 @@ from utils.helper_functions import build_dataset
 import os
 from data_loader import create_dataloaders
 from tqdm.auto import tqdm
+import torchvision.models as models
 NUMBER_OF_CLASSES = 6
-num_epochs = 15
-
+num_epochs = 150
 
 class CustomModel(nn.Module):
-    num_classes = NUMBER_OF_CLASSES
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, dropout_rate=0.5, freeze_layers=True):
         super(CustomModel, self).__init__()
         
-        # Load the pre-trained EfficientNetB5 model
-        self.model = timm.create_model('efficientnet_b5', pretrained=True)
+        # Load the pre-trained ResNet50 model
+        self.resnet50 = models.resnet50(pretrained=True)
         
-        # Freeze all the layers in EfficientNetB5
-        for param in self.model.parameters():
-            param.requires_grad = False
+        # Optionally freeze the early layers
+        if freeze_layers:
+            for param in self.resnet50.parameters():
+                param.requires_grad = False
         
-        # Get the number of features in the last layer
-        if hasattr(self.model, 'classifier'):
-            num_features = self.model.classifier.in_features
-        elif hasattr(self.model, 'fc'):
-            num_features = self.model.fc.in_features
-        else:
-            # If neither 'classifier' nor 'fc' exists, we need to investigate the model structure
-            raise AttributeError("Model structure is different than expected. Please check the timm model definition.")
+        # Replace the fully connected layer with a custom classifier
+        # Original ResNet50 has a fully connected layer with 2048 input features and 1000 output classes
+        # We modify this for our custom classification task
+        num_features = self.resnet50.fc.in_features
         
-        # Replace the last layer with a new classifier
-        self.model.classifier = nn.Sequential(
-            nn.Dropout(0.3),  # Add dropout for regularization
-            nn.Linear(num_features, num_classes)
+        # Custom classifier with dropout and new output size
+        self.resnet50.fc = nn.Sequential(
+            nn.BatchNorm1d(num_features),         # BatchNorm for regularization
+            nn.Dropout(dropout_rate),             # Dropout to prevent overfitting
+            nn.Linear(num_features, 512),         # Hidden layer with 512 units
+            nn.ReLU(),                            # ReLU activation
+            nn.Linear(512, num_classes)           # Final output layer for num_classes
         )
         
-        # Unfreeze the last few layers for fine-tuning
-        for param in self.model.classifier.parameters():
-            param.requires_grad = True
-        
-        # Optionally, unfreeze more layers if needed
-        # for name, param in self.model.named_parameters():
-        #     if "blocks.6" in name or "blocks.7" in name:  # Unfreeze the last two blocks
-        #         param.requires_grad = True
-
     def forward(self, x):
-        return self.model(x)
+        # Forward pass through the ResNet-50 model
+        x = self.resnet50(x)
+        return x
+
 
 
 # Training function
 
 def train_model(data_folder, model_folder, verbose):
-    num_epochs=1
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
@@ -72,7 +64,7 @@ def train_model(data_folder, model_folder, verbose):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     # Learning rate scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.1)
 
     print("Initial model parameters:")
     for name, param in model.named_parameters():

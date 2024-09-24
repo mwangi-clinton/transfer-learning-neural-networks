@@ -6,18 +6,17 @@ import torch
 
 def create_dataloaders(dataset_path, verbose=True ):
     batch_size=64
-    num_workers=2
+    num_workers=4
     # Define the transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(224),
+        transforms.Resize((256,256)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
     val_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize((256,256)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
