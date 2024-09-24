@@ -1,7 +1,11 @@
 import os
 import shutil
 from sklearn.model_selection import train_test_split
+import torch
+from torchvision import transforms
+from PIL import Image
 
+class_names = ['Acne', 'Carcinoma', 'Eczema', 'Keratosis', 'Milia', 'Rosacea']
 def build_dataset(source_dir, dest_dir, verbose=False):
     # Create the validation and training folders in the destination folder
     train_dir = os.path.join(dest_dir, 'train')
@@ -43,3 +47,35 @@ def build_dataset(source_dir, dest_dir, verbose=False):
         print(f"Dataset created successfully in {dest_dir}")
 
     return dest_dir
+
+def predict_image(image_path, model_path):
+    # Load the saved model
+    model = torch.load(model_path)
+    model.eval()  # Set the model to evaluation mode
+
+    # Define the same transforms used during training
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    # Load and preprocess the image
+    image = Image.open(image_path)
+    image = transform(image).unsqueeze(0)  # Add batch dimension
+
+    # Make sure to use the same device as the model was trained on
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    image = image.to(device)
+
+    # Make prediction
+    with torch.no_grad():
+        outputs = model(image)
+        _, predicted = torch.max(outputs, 1)
+
+    # Get the predicted class name
+    predicted_class = class_names[predicted.item()]
+    print(predicted_class)
+    return predicted_class
+
